@@ -15,7 +15,8 @@ terraform {
     resource_group_name  = __RG2__
     storage_account_name = __SANAME__
     container_name       = __TFSTATE__
-    key                  = __ACSKEY__
+    key                  = __KEY__
+    access_key = __ACSKEY__
   }
 }
 
