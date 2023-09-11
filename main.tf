@@ -12,11 +12,11 @@ provider "azurerm" {
 
 terraform {
   backend "azurerm" {
-    resource_group_name  = __RG2__
-    storage_account_name = __SANAME__
-    container_name       = __CONNAME__
-    key                  = __KEY__
-    access_key = __ACSKEY__
+    resource_group_name  = __rg2__
+    storage_account_name = __saname__
+    container_name       = __conname__
+    key                  = __key__
+    access_key = __acskey__
   }
 }
 
