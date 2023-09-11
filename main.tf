@@ -14,7 +14,7 @@ terraform {
   backend "azurerm" {
     resource_group_name  = __RG2__
     storage_account_name = __SANAME__
-    container_name       = __TFSTATE__
+    container_name       = __CONNAME__
     key                  = __KEY__
     access_key = __ACSKEY__
   }
