@@ -1,0 +1,129 @@
+trigger:
+- none
+
+variables:
+  vmImageName: 'ubuntu-latest'
+
+pool:
+  name: computeragent
+  
+
+stages:
+  - stage: init_and_plan
+    displayName: init_and_plan
+    jobs:
+     - job: copy_publish_azurecli
+       displayName: copy_publish_azurecli_init_plan
+       pool: 
+        vmImage: $(vmImageName)
+       steps: 
+        - task: CopyFiles@1
+          displayName: copy_files
+          inputs:
+            SourceFolder: '$(System.DefaultworkingDirectory)'
+            Contents: '*.tf'
+            TargetFolder: '$(Build.DefaultworkingDirectory)/teraa'
+          
+        - task: AzureCLI@1
+          displayName: azurecli
+          inputs:
+           azureSubscription: 'new1'
+           scriptLocation: 'inlineScript'
+           inlineScript: |
+            az group create --location CentralIndia --name $(rg2)
+            az storage account create --name $(saname) --resource-group $(rg2) --location CentralIndia --sku Standard_LRS
+            az storage container create --name $(conname) --account-name $(saname)
+            az storage account keys list -g $(rg2) -n $(saname)  
+
+        - task: replacetokens@3
+          displayName: replacetokens
+          inputs:
+            rootDirectory: '$(Build.DefaultworkingDirectory)/teraa'
+            targetFiles: '**/*.tf'
+            encoding: 'auto'
+            writeBOM: true
+            actionOnMissing: 'warn'
+            keepToken: false
+            actionOnNoFiles: 'continue'
+            enableTransforms: false
+            tokenPrefix: '__'
+            tokenSuffix: '__'
+            enableRecursion: false
+            useLegacyPattern: false
+            enableTelemetry: true
+
+        - task: TerraformTaskV2@2
+          displayName: terraforminit
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(Build.DefaultworkingDirectory)/teraa'
+            backendServiceArm: 'new1'
+            backendAzureRmResourceGroupName: '$(rg2)'
+            backendAzureRmStorageAccountName: '$(saname)'
+            backendAzureRmContainerName: '$(conname)'
+            backendAzureRmKey: '$(key)'
+        
+
+        - task: TerraformTaskV2@2
+          displayName: terraformvalidate
+          inputs:
+              provider: 'azurerm'
+              command: 'validate'
+              workingDirectory: '$(Build.DefaultworkingDirectory)/teraa'
+
+        
+        - task: TerraformTaskV3@3
+          displayName: terraformplan
+          inputs:
+            provider: 'azurerm'
+            command: 'plan'
+            workingDirectory: '$(Build.DefaultworkingDirectory)/teraa'
+            commandOptions: '-out plan.out'
+            environmentServiceNameAzureRM: 'new1'
+
+        - task: PublishBuildArtifacts@1
+          displayName: publishing_files
+          inputs: 
+            PathtoPublish: '$(Build.DefaultworkingDirectory)'
+            ArtifactName: 'drop'
+            publishLocation: 'Container'    
+        
+
+        
+
+        
+
+  - stage: terraform_apply
+    displayName: terraform_apply
+    dependsOn: init_and_plan
+    condition: succeeded()
+    jobs:
+      - deployment: terraform_apply
+        displayName: terraform_apply
+        pool:
+          vmImage: $(vmImageName)
+        environment: 'dev'
+        strategy:
+         runOnce:
+           deploy:
+             steps:
+              - task: DownloadBuildArtifacts@1
+                inputs:
+                  buildType: 'current'
+                  downloadType: 'single'
+                  artifactName: 'drop'
+                  downloadPath: '$(System.ArtifactsDirectory)'
+
+              - script: 
+                  chmod +x $(System.ArtifactsDirectory)/drop/teraa/.terraform/providers/registry.terraform.io/hashicorp/azurerm/3.0.0/linux_amd64/terraform-provider-azurerm_v3.0.0_x5
+ 
+                     
+              - task: TerraformTaskV3@3
+                displayName: terraform_apply
+                inputs:
+                  provider: 'azurerm'
+                  command: 'apply'
+                  workingDirectory: '$(System.ArtifactsDirectory)/drop/teraa'
+                  commandOptions: 'plan.out'
+                  environmentServiceNameAzureRM: 'new1'
