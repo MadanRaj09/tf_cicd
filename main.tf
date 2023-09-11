@@ -10,6 +10,15 @@ provider "azurerm" {
   features {}
 }
 
+terraform {
+  backend "azurerm" {
+    resource_group_name  = __RG2__
+    storage_account_name = __SANAME__
+    container_name       = __TFSTATE__
+    key                  = __ACSKEY__
+  }
+}
+
 resource "azurerm_resource_group" "rg1" {
   name     = "${var.prefix}-RG"
   location = "${var.rgloc}" 
