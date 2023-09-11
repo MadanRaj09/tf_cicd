@@ -16,7 +16,7 @@ terraform {
     storage_account_name = __saname__
     container_name       = __conname__
     key                  = __key__
-    access_key = __acskey__
+    access_key =  "j7vrZE2Qo40E0v6iAx2/kbBIoVelfr9A5Pnmrc485/5zNXAkpQhOQ9doQ5BtqesKlx+ic8Ky3OnR+AStIrwQ3g=="
   }
 }
 
